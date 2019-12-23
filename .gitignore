@@ -1,0 +1,16 @@
+# data
+#data/*
+data/boson/*
+!data/boson/*.md
+data/msra_ner/*
+!data/msra_ner/*.md
+!data/msra_ner/tags.txt
+data/weibo/*
+!data/weibo/*.md
+Summaries/
+model_weight/
+bc/
+
+# 通用
+envi/
+__pycache__/

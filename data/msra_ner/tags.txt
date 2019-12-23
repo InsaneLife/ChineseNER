@@ -1,0 +1,7 @@
+o
+b_ns
+i_ns
+b_nt
+i_nt
+b_nr
+i_nr
