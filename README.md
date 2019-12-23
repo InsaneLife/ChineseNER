@@ -19,7 +19,7 @@ TODO:
 3. Attention
 4. Bert
 
-# data
+# Data
 ## MSRA NER微软亚洲研究院数据集。
   - 5 万多条中文命名实体识别标注数据（包括地点、机构、人物） 
   - https://github.com/InsaneLife/ChineseNLPCorpus/tree/master/NER/MSRA
