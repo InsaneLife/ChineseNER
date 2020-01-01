@@ -14,7 +14,7 @@ import tensorflow as tf
 from tensorflow.python.ops import rnn_cell_impl as core_rnn_cell
 from tensorflow.python.framework import ops
 import numpy as np
-from .data_utils import pad_sequences, get_chunks, get_tag_labels, mini_batche_bert
+from .utils import pad_sequences, get_chunks, get_tag_labels
 from .bert import modeling_v1 as modeling, tokenization, optimization
 
  
@@ -99,8 +99,7 @@ class BaseModel(object):
             return train_op
 
     def initialize_session(self):
-        self.logger = self.config.logger
-        self.logger.info("Initializing tf session")
+        print("Initializing tf session")
         gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.5)
         global_config = tf.ConfigProto(gpu_options=gpu_options)
         # global_config.gpu_options.allow_growth = True
@@ -111,7 +110,7 @@ class BaseModel(object):
         self.saver = tf.train.Saver()
 
     def restore_pretrain_session(self, dir_model):
-        self.logger.info("Reloading the latest trained model...")
+        print("Reloading the latest trained model...")
         if not os.path.exists(dir_model):
             os.makedirs(dir_model)
 
@@ -127,7 +126,7 @@ class BaseModel(object):
         cur_saver.restore(self.sess, dir_model)
 
     def restore_session(self, dir_model):
-        self.logger.info("Reloading the latest trained model...")
+        print("Reloading the latest trained model...")
         if not os.path.exists(dir_model):
             os.makedirs(dir_model)
         self.saver.restore(self.sess, dir_model)
@@ -149,28 +148,28 @@ class BaseModel(object):
         nepoch_no_imprv = 0
         # best_f1 = 0
         # nepoch_no_f1_imprv = 0
-        self.add_summary()
+        # self.add_summary()
         for epoch in range(self.config.nepochs):
-            self.logger.info("Epoch {:} out of {:}".format(epoch + 1, self.config.nepochs))
+            print("Epoch {:} out of {:}".format(epoch + 1, self.config.nepochs))
             score = self.run_epoch(train, dev, epoch)
             self.config.learning_rate *= self.config.lr_decay
             if score >= best_score:
                 nepoch_no_imprv = 0
                 self.save_session()
                 best_score = score
-                self.logger.info("- new best score!")
+                print("- new best score!")
                 # self.saved_model()
             else:
                 nepoch_no_imprv += 1
                 if nepoch_no_imprv >= self.config.nepoch_no_imprv:
-                    self.logger.info("- early stopping {} epochs without improvement".format(nepoch_no_imprv))
+                    print("- early stopping {} epochs without improvement".format(nepoch_no_imprv))
                     break
 
     def evaluate(self, test):
-        self.logger.info("Testing model over test set")
+        print("Testing model over test set")
         metrics = self.run_evaluate(test)
         msg = " - ".join(["{} {:04.4f}".format(k, v) for k, v in metrics.items()])
-        self.logger.info(msg)
+        print(msg)
 
     def bi_lstm(self, input_embed, seq_len,
                 layer_size, keep_prob, reuse=False,
@@ -495,27 +494,17 @@ class BaseModel(object):
         # 第二维：sentence中每一个word的长度
         self.word_lengths = tf.placeholder(tf.int32, shape=[None, None], name="word_lengths")
 
-        self.kg_onehots = tf.placeholder(tf.float32, shape=[None, None, None], name="kg_onehots")
-        self.kg_category = tf.reduce_max(self.kg_onehots, axis=1)
-        self.mask_ids = tf.placeholder(tf.int32, shape=[None, None], name="mask_ids")
-        # shape = (batch_size, max length of categories in batch)
-        # 第一维：batch中的每一个sentence
-        # 第二维：每一个sentence中的category id list，并根据最长category length进行了0填充
-        self.categories = tf.placeholder(tf.float32, shape=[None, self.config.ncategories], name="categories")
-
-        self.actions = tf.placeholder(tf.float32, shape=[None, self.config.nactions], name="actions")
         # shape = (batch_size, max length of sentence)
         # 第一维：batch中的每一个sentence
         # 第二维：sentence中每一个word对应的tag
-        self.meta_ner_labels = tf.placeholder(tf.int32, shape=[None, None], name="meta_ner_labels")
-        self.service_ner_labels = tf.placeholder(tf.int32, shape=[None, None], name="service_ner_labels")
+        self.ner_labels = tf.placeholder(tf.int32, shape=[None, None], name="meta_ner_labels")
 
         self.dropout = tf.placeholder(dtype=tf.float32, shape=[], name="dropout")
         self.learning_rate = tf.placeholder(dtype=tf.float32, shape=[], name="learning_rate")
 
         self.output = tf.placeholder(dtype=tf.float32, shape=[None, None, None], name="output_embedding")
         self.labels_pred = tf.placeholder(dtype=tf.int32, shape=[None, None], name="labels_pred")
-        self.pred_scores = tf.placeholder(dtype=tf.float32, shape=[None], name="pred_score")
+        self.slot_scores = tf.placeholder(dtype=tf.float32, shape=[None], name="pred_score")
 
     def add_bert_layer(self):
         with tf.variable_scope("bert"):
